@@ -294,7 +294,7 @@ async function migrateTo1907() {
                   // add an active effect with the changes we've just built, synced to the learned state
                   toCreate.push({
                     name: nk,
-                    changes: changes,
+                    system: { changes: changes },
                     disabled: !item.system.talents[`talent${i}`].islearned,
                   });
                 }
@@ -335,7 +335,7 @@ async function migrateTo1907() {
                   // add an active effect with the changes we've just built, synced to the learned state
                   toCreate.push({
                     name: nk,
-                    changes: changes,
+                    system: { changes: changes },
                     disabled: !item.system.upgrades[`upgrade${i}`].islearned,
                   });
                 }
@@ -378,7 +378,7 @@ async function migrateTo1907() {
                   // add an active effect with the changes we've just built, synced to the learned state
                   toCreate.push({
                     name: nk,
-                    changes: changes,
+                    system: { changes: changes },
                     disabled: !item.system.upgrades[`upgrade${i}`].islearned,
                   });
                 }

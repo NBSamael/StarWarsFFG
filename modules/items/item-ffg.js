@@ -5,6 +5,7 @@ import ImportHelpers from "../importer/import-helpers.js";
 import ModifierHelpers from "../helpers/modifiers.js";
 import Helpers from "../helpers/common.js";
 import ItemHelpers from "../helpers/item-helpers.js";
+import EffectHelpers from "../helpers/effects.js";
 
 /**
  * Extend the basic Item with some very simple modifications.
@@ -85,7 +86,7 @@ export class ItemFFG extends ItemBaseFFG {
         const effects = {
           name: `(inherent)`,
           img: this.img,
-          changes: [],
+          system: { changes: [] },
         };
         if (this.type === "species") {
           for (const attribute of Object.keys(this.system.attributes)) {
@@ -102,7 +103,7 @@ export class ItemFFG extends ItemBaseFFG {
                 cur_mod['modType'],
                 cur_mod['mod']
               );
-              effects.changes.push({
+              effects.system.changes.push({
                 key: path,
                 type: "add",
                 value: this.system.attributes[attribute].value,
@@ -119,7 +120,7 @@ export class ItemFFG extends ItemBaseFFG {
               cur_mod['modType'],
               cur_mod['mod']
             );
-            effects.changes.push({
+            effects.system.changes.push({
               key: path,
               type: "add",
               value: 0,
@@ -136,7 +137,7 @@ export class ItemFFG extends ItemBaseFFG {
                 cur_mod['modType'],
                 cur_mod['mod']
               );
-              effects.changes.push({
+              effects.system.changes.push({
                 key: path,
                 type: "add",
                 value: 0,
@@ -153,7 +154,7 @@ export class ItemFFG extends ItemBaseFFG {
               cur_mod['modType'],
               cur_mod['mod']
             );
-            effects.changes.push({
+            effects.system.changes.push({
               key: path,
               type: "add",
               value: 0,
@@ -166,7 +167,7 @@ export class ItemFFG extends ItemBaseFFG {
           const slots = this.type === "career" ? 8 : 5;
           for (let i = 0; i < slots; i++) {
             const skill = this.system.careerSkills?.[`careerSkill${i}`];
-            effects.changes.push({
+            effects.system.changes.push({
               key: skill && skill !== "(none)" ? `system.skills.${skill}.careerskill` : "(none)",
               type: "add",
               value: true,
@@ -203,7 +204,7 @@ export class ItemFFG extends ItemBaseFFG {
       CONFIG.logger.debug("Unable to locate any inherent effect. This may be expected.");
     }
     if (itemEffect && Object.keys(changed).includes("system") && Object.keys(changed.system).includes("attributes")) {
-      const newChanges = foundry.utils.deepClone(itemEffect.system.changes);
+      const newChanges = EffectHelpers.getChanges(itemEffect);
       for (const updateKey of Object.keys(changed.system.attributes)) {
         const existingChange = newChanges.find(c => c.key.startsWith(`system.attributes.${updateKey}`));
         if (existingChange) {
@@ -237,7 +238,7 @@ export class ItemFFG extends ItemBaseFFG {
           // existing entry
           CONFIG.logger.debug(`> Staged AE changes for update: ${JSON.stringify(changes)}`);
           await existingEffect.update({
-            changes: changes,
+            "system.changes": changes,
           });
         }
       }
@@ -260,9 +261,11 @@ export class ItemFFG extends ItemBaseFFG {
 
   /**
    * Augment the basic Item data model with additional dynamic data.
+   * This must stay synchronous: the owning actor prepares its own data (encumbrance, soak...) right after its
+   * items, and reads their adjusted values. Anything awaited here would only be computed after the actor.
    */
-  async prepareData() {
-    await super.prepareData();
+  prepareData() {
+    super.prepareData();
 
     // Get the Item's data
     const item = this;
@@ -270,7 +273,7 @@ export class ItemFFG extends ItemBaseFFG {
     const data = item.system;
 
     if (!item.flags.starwarsffg) {
-      await item.updateSource({
+      item.updateSource({
         flags: {
           starwarsffg: {
             isCompendium: !!this.compendium,
@@ -298,7 +301,8 @@ export class ItemFFG extends ItemBaseFFG {
       }
     }
 
-    data.renderedDesc = await PopoutEditor.renderDiceImages(data.description, actor);
+    // rendering the description is asynchronous; fill it in when ready without holding up the stats below
+    PopoutEditor.renderDiceImages(data.description, actor).then(html => { data.renderedDesc = html; });
 
     // an attachment's Modifications only come back with a total when sources are asked for
     const fromAttachment = (attachment, modifications, key, modtype) =>
@@ -425,9 +429,7 @@ export class ItemFFG extends ItemBaseFFG {
           data.range.adjusted = rangeBands[newRange].value;
         }
 
-        if (this.isEmbedded && this.actor && this.actor.type !== "vehicle" && ModifierHelpers.shouldApplyCharacteristicToDamage(data)) {
-          apply(data.damage, data.characteristic.value, actor.system.characteristics[data.characteristic.value].value);
-        }
+        // the wielder's characteristic (e.g. Brawn) is added by prepareCharacteristicDamage, once the actor is prepared
 
         const rangeLabel = (this.type === "weapon" ? `SWFFG.WeaponRange` : `SWFFG.VehicleRange`) + this._capitalize(data.range.adjusted);
         data.range.label = rangeLabel;
@@ -554,6 +556,23 @@ export class ItemFFG extends ItemBaseFFG {
       this._prepareSignatureAbilities();
     }
   }
+  /**
+   * Add the wielder's characteristic to a weapon's damage (e.g. Brawn for melee weapons).
+   * It needs the actor's final characteristics, including active effects, so the actor calls this
+   * from its own data preparation instead of the item doing it in prepareData.
+   */
+  prepareCharacteristicDamage() {
+    if (!["weapon", "shipweapon"].includes(this.type)) return;
+    const data = this.system;
+    if (!this.isEmbedded || !this.actor || this.actor.type === "vehicle" || !ModifierHelpers.shouldApplyCharacteristicToDamage(data)) return;
+    const name = data.characteristic.value;
+    const amount = parseInt(this.actor.system.characteristics?.[name]?.value, 10) || 0;
+    data.damage.adjusted += amount;
+    if (amount) {
+      data.damage.sources.push({ name: name, value: amount > 0 ? `+${amount}` : `${amount}` });
+    }
+  }
+
   /**
    * Capitalize string
    * @param  {String} s   String value to capitalize

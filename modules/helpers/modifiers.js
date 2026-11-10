@@ -1,4 +1,5 @@
 import PopoutModifiers from "../popout-modifiers.js";
+import EffectHelpers from "./effects.js";
 
 export default class ModifierHelpers {
   /**
@@ -609,6 +610,8 @@ export default class ModifierHelpers {
     // first update anything inherent to the item type (such as "brawn" on "species")
     const inherentEffectName = `(inherent)`;
     const inherentEffect = existing.find(e => e.name === inherentEffectName);
+    // work on a plain copy: prepared v14 changes point back to their effect
+    const inherentChanges = EffectHelpers.getChanges(inherentEffect);
     if (inherentEffect && Object.keys(formData.data).includes("attributes")) {
       for (let k of Object.keys(formData.data.attributes)) {
         if (k.startsWith("attr")) {
@@ -626,13 +629,13 @@ export default class ModifierHelpers {
             curMod['modType'],
             curMod['mod']
           );
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
-            inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.data.attributes[k].value;
+            inherentChanges[inherentEffectChangeIndex].value = formData.data.attributes[k].value;
           }
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     }
     // some inherent effects are not in the `attribute` keyspace; make sure to get them as well
     if (inherentEffect && ["gear", "weapon", "armour"].includes(item.type)) {
@@ -646,9 +649,9 @@ export default class ModifierHelpers {
           curMod['modType'],
           curMod['mod']
         );
-        const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+        const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
         if (inherentEffectChangeIndex >= 0) {
-          inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.data.encumbrance.value;
+          inherentChanges[inherentEffectChangeIndex].value = formData.data.encumbrance.value;
         }
       }
 
@@ -663,9 +666,9 @@ export default class ModifierHelpers {
             curMod['modType'],
             curMod['mod']
           );
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
-            inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.data.defence.value;
+            inherentChanges[inherentEffectChangeIndex].value = formData.data.defence.value;
           }
         }
 
@@ -679,13 +682,13 @@ export default class ModifierHelpers {
             curMod['modType'],
             curMod['mod']
           );
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
-            inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.data.soak.value;
+            inherentChanges[inherentEffectChangeIndex].value = formData.data.soak.value;
           }
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     } else if (inherentEffect && ["shipattachment"].includes(item.type)) {
       const explodedMods = ModifierHelpers.explodeMod(
         "Vehicle Stat",
@@ -697,13 +700,13 @@ export default class ModifierHelpers {
           curMod['modType'],
           curMod['mod']
         );
-        const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+        const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
         if (inherentEffectChangeIndex >= 0) {
           // hardpoints are _spent_, not _gained_
-          inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.data.hardpoints.value * -1;
+          inherentChanges[inherentEffectChangeIndex].value = formData.data.hardpoints.value * -1;
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     }
 
 
@@ -743,14 +746,14 @@ export default class ModifierHelpers {
         // check if an active effect exists - create it if not, update it if it does
         if (match) {
           await match.update({
-            changes: changes,
+            "system.changes": changes,
           });
         } else if (k.startsWith("attr")) {
           // user-created active effects only - skip inherent effects like "brawn" on "species"
           // new entry
           toCreate.push({
             name: k,
-            changes: changes,
+            system: { changes: changes },
           });
         }
       }
@@ -760,7 +763,7 @@ export default class ModifierHelpers {
     const itemEffect = existingEffects.find(i => i.name === `(inherent)`);
     if (itemEffect && item.type === "species") {
       // update the wound and strain changes to match
-      const newChanges = foundry.utils.deepClone(itemEffect.system.changes);
+      const newChanges = EffectHelpers.getChanges(itemEffect);
       const newBrawn = newChanges.find(ae => ae.key === "system.characteristics.Brawn.value").value;
       const newWillpower = newChanges.find(ae => ae.key === "system.characteristics.Willpower.value").value;
       // read the values from the form, if available, otherwise from the object

@@ -1,4 +1,5 @@
 import ModifierHelpers from "./modifiers.js";
+import EffectHelpers from "./effects.js";
 
 export default class ItemHelpers {
   static async itemUpdate(event, formData) {
@@ -285,7 +286,7 @@ export default class ItemHelpers {
             CONFIG.logger.debug(`Located ${attr}, updating with new value of ${newValue}`);
             // keep every change on the effect - some mods (e.g., Defence) explode into several
             await matchingEffect.update({
-              "system.changes": matchingEffect.system.changes.map(change => ({...change, value: newValue})),
+              "system.changes": EffectHelpers.getChanges(matchingEffect).map(change => ({...change, value: newValue})),
             });
           }
         }
@@ -315,13 +316,14 @@ export default class ItemHelpers {
         updatedEncumbrance = realEncumbrance;
       }
       CONFIG.logger.debug(`Original encumbrance: ${realEncumbrance}, new encumbrance: ${updatedEncumbrance}`);
-      for (const change of activeEffect.system.changes) {
+      const effectChanges = EffectHelpers.getChanges(activeEffect);
+      for (const change of effectChanges) {
         if (change.key === encumbranceModPath) {
           change.value = updatedEncumbrance;
           break;
         }
       }
-      await activeEffect.update({"system.changes": activeEffect.system.changes});
+      await activeEffect.update({"system.changes": effectChanges});
     }
   }
 

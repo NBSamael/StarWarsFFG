@@ -1,5 +1,6 @@
 import {DicePoolFFG, RollFFG} from "./dice-pool-ffg.js";
 import PopoutEditor from "./popout-editor.js";
+import {configuredMessageMode, normalizeMessageMode} from "./helpers/message-mode.js";
 
 /**
  * Extend the base Combat entity.
@@ -154,7 +155,7 @@ export class CombatFFG extends Combat {
 
     const rollData = combatant.actor ? combatant.actor.getRollData() : {};
 
-    let roll = await new RollFFG(formula, rollData).roll();
+    let roll = await new RollFFG(formula, rollData).evaluate();
 
     const total = roll.ffg.success + roll.ffg.advantage * 0.01;
     roll._result = total;
@@ -290,7 +291,7 @@ export class CombatFFG extends Combat {
                   pool.upgrade(addPool.upgrades)
 
                   const rollData = c.actor ? c.actor.getRollData() : {};
-                  let roll = await new RollFFG(pool.renderDiceExpression(), rollData, { success: pool.success, advantage: pool.advantage, failure: pool.failure, threat: pool.threat }).roll();
+                  let roll = await new RollFFG(pool.renderDiceExpression(), rollData, { success: pool.success, advantage: pool.advantage, failure: pool.failure, threat: pool.threat }).evaluate();
                   const total = roll.ffg.success + roll.ffg.advantage * 0.01;
                   roll._result = total;
                   roll._total = total;
@@ -299,9 +300,8 @@ export class CombatFFG extends Combat {
                   updates.push({ _id: id, initiative: roll.total });
 
                   // Determine the roll mode
-                  let messageMode = messageOptions.messageMode
-                    || (messageOptions.rollMode && Roll._mapLegacyRollMode(messageOptions.rollMode))
-                    || game.settings.get("core", "messageMode");
+                  let messageMode = normalizeMessageMode(messageOptions.messageMode || messageOptions.rollMode)
+                    || configuredMessageMode();
                   if ((c.token.hidden || c.hidden) && messageMode === "public") messageMode = "gm";
 
                   // Construct chat message data

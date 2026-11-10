@@ -1,6 +1,7 @@
 import PopoutEditor from "../popout-editor.js";
 import { ForceDie } from "./dietype/ForceDie.js";
 import {migrateDataToSystem} from "../helpers/migration.js";
+import {configuredMessageMode, normalizeMessageMode} from "../helpers/message-mode.js";
 import {ItemFFG} from "../items/item-ffg.js";
 
 /**
@@ -255,7 +256,7 @@ export class RollFFG extends Roll {
     const isPrivate = chatOptions.isPrivate;
 
     // Execute the roll, if needed
-    if (!this._evaluated) await this.roll();
+    if (!this._evaluated) await this.evaluate();
     await this.updateSymbols();
 
     // Define chat data
@@ -347,9 +348,8 @@ export class RollFFG extends Roll {
     if (!this._evaluated) await this.evaluate();
 
     // legacy rollMode values (e.g. "gmroll") still come from older callers and modules
-    const legacyMode = rollMode || messageData.rollMode;
-    if (!messageMode && legacyMode) messageMode = Roll._mapLegacyRollMode(legacyMode);
-    messageMode ||= messageData.messageMode || game.settings.get("core", "messageMode");
+    messageMode = normalizeMessageMode(messageMode || messageData.messageMode || rollMode || messageData.rollMode)
+      || configuredMessageMode();
     delete messageData.rollMode;
     delete messageData.messageMode;
 

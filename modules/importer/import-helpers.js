@@ -2,6 +2,7 @@ import Helpers from "../helpers/common.js";
 import {migrateDataToSystem} from "../helpers/migration.js";
 import {ItemFFG} from "../items/item-ffg.js";
 import ModifierHelpers from "../helpers/modifiers.js";
+import EffectHelpers from "../helpers/effects.js";
 
 export default class ImportHelpers {
   /**
@@ -469,7 +470,7 @@ export default class ImportHelpers {
         }
 
         if (quality.Key === "DEFENSIVE") {
-          const nk = randomId();
+          const nk = foundry.utils.randomID();
           const count = quality.Count ? parseInt(quality.Count) : 0;
 
           attributes[`attr${nk}`] = {
@@ -3043,7 +3044,7 @@ export default class ImportHelpers {
         const effects = {
           name: `(inherent)`,
           img: item.img,
-          changes: [],
+          system: { changes: [] },
         };
         if (item.type === "species") {
           for (const attribute of Object.keys(item.system.attributes)) {
@@ -3056,7 +3057,7 @@ export default class ImportHelpers {
                 cur_mod['modType'],
                 cur_mod['mod']
               );
-              effects.changes.push({
+              effects.system.changes.push({
                 key: path,
                 type: "add",
                 value: item.system.attributes[attribute].value,
@@ -3073,7 +3074,7 @@ export default class ImportHelpers {
               cur_mod['modType'],
               cur_mod['mod']
             );
-            effects.changes.push({
+            effects.system.changes.push({
               key: path,
               type: "add",
               value: 0,
@@ -3090,7 +3091,7 @@ export default class ImportHelpers {
                 cur_mod['modType'],
                 cur_mod['mod']
               );
-              effects.changes.push({
+              effects.system.changes.push({
                 key: path,
                 type: "add",
                 value: 0,
@@ -3107,7 +3108,7 @@ export default class ImportHelpers {
               cur_mod['modType'],
               cur_mod['mod']
             );
-            effects.changes.push({
+            effects.system.changes.push({
               key: path,
               type: "add",
               value: 0,
@@ -3137,6 +3138,8 @@ export default class ImportHelpers {
     // first update anything inherent to the item type (such as "brawn" on "species")
     const inherentEffectName = "(inherent)";
     const inherentEffect = existing.find(e => e.name === inherentEffectName);
+    // work on a plain copy: prepared v14 changes point back to their effect
+    const inherentChanges = EffectHelpers.getChanges(inherentEffect);
     if (inherentEffect && Object.keys(formData.system).includes("attributes")) {
       for (let k of Object.keys(formData.system.attributes)) {
         if (k.startsWith("attr")) {
@@ -3151,21 +3154,21 @@ export default class ImportHelpers {
 
         for (const curMod of explodedMods) {
           let modPath = ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']);
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
             if (modPath === "system.stats.wounds.max" && item.type === "species") {
-              inherentEffect.system.changes[inherentEffectChangeIndex].value = parseInt(inherentEffect.system.changes[inherentEffectChangeIndex].value) + parseInt(item.system.attributes.Brawn.value);
+              inherentChanges[inherentEffectChangeIndex].value = parseInt(inherentChanges[inherentEffectChangeIndex].value) + parseInt(item.system.attributes.Brawn.value);
             } else if (modPath === "system.stats.strain.max" && item.type === "species") {
-              inherentEffect.system.changes[inherentEffectChangeIndex].value = parseInt(inherentEffect.system.changes[inherentEffectChangeIndex].value) + parseInt(item.system.attributes.Willpower.value);
+              inherentChanges[inherentEffectChangeIndex].value = parseInt(inherentChanges[inherentEffectChangeIndex].value) + parseInt(item.system.attributes.Willpower.value);
             } else if (modPath === "system.stats.encumbrance.max" && item.type === "species") {
-              inherentEffect.system.changes[inherentEffectChangeIndex].value = parseInt(inherentEffect.system.changes[inherentEffectChangeIndex].value) + 5;
+              inherentChanges[inherentEffectChangeIndex].value = parseInt(inherentChanges[inherentEffectChangeIndex].value) + 5;
             } else {
-              inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.system.attributes[k].value;
+              inherentChanges[inherentEffectChangeIndex].value = formData.system.attributes[k].value;
             }
           }
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     }
     // some inherent effects are not in the `attribute` keyspace; make sure to get them as well
     if (inherentEffect && ["gear", "weapon", "armour"].includes(item.type)) {
@@ -3179,9 +3182,9 @@ export default class ImportHelpers {
           curMod['modType'],
           curMod['mod'],
         );
-        const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+        const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
         if (inherentEffectChangeIndex >= 0) {
-          inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.system.encumbrance.value;
+          inherentChanges[inherentEffectChangeIndex].value = formData.system.encumbrance.value;
         }
       }
 
@@ -3196,9 +3199,9 @@ export default class ImportHelpers {
             curMod['modType'],
             curMod['mod'],
           );
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
-            inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.system.defence.value;
+            inherentChanges[inherentEffectChangeIndex].value = formData.system.defence.value;
           }
         }
 
@@ -3211,13 +3214,13 @@ export default class ImportHelpers {
             curMod['modType'],
             curMod['mod'],
           );
-          const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+          const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
           if (inherentEffectChangeIndex >= 0) {
-            inherentEffect.system.changes[inherentEffectChangeIndex].value = formData.system.soak.value;
+            inherentChanges[inherentEffectChangeIndex].value = formData.system.soak.value;
           }
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     } else if (inherentEffect && item.type === "shipattachment") {
       const explodedMods = ModifierHelpers.explodeMod(
         "Vehicle Stat",
@@ -3229,13 +3232,13 @@ export default class ImportHelpers {
           curMod['modType'],
           curMod['mod'],
         );
-        const inherentEffectChangeIndex = inherentEffect.system.changes.findIndex(c => c.key === modPath);
+        const inherentEffectChangeIndex = inherentChanges.findIndex(c => c.key === modPath);
         if (inherentEffectChangeIndex >= 0) {
           // hardpoints are _spent_, not _gained_
-          inherentEffect.system.changes[inherentEffectChangeIndex].value = (formData.system?.hardpoints?.value ?? 0) * -1;
+          inherentChanges[inherentEffectChangeIndex].value = (formData.system?.hardpoints?.value ?? 0) * -1;
         }
       }
-      await inherentEffect.update({"system.changes": inherentEffect.system.changes});
+      await inherentEffect.update({"system.changes": inherentChanges});
     }
 
     // iterate over formdata attributes to add/update them if they were added
@@ -3260,14 +3263,14 @@ export default class ImportHelpers {
           // existing entry
           CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
           await match.update({
-            changes: changes,
+            "system.changes": changes,
           });
         } else if (k.startsWith("attr")) {
           // new entry
           const effect = {
             name: k,
-            icon: item.img,
-            changes: changes,
+            img: item.img,
+            system: { changes: changes },
           };
           CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);
           toCreate.push(effect);
@@ -3365,7 +3368,7 @@ export default class ImportHelpers {
             toCreate.push({
               name: attributeName,
               img: talent.img,
-              changes: changes,
+              system: { changes: changes },
               disabled: true,
             });
           }

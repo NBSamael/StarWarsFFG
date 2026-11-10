@@ -1874,23 +1874,25 @@ export class ActorSheetFFG extends foundry.appv1.sheets.ActorSheet {
     const spentId = foundry.utils.randomID();
     const effects = {
       name: `purchased-${spentId}`,
-      changes: [
-        {
-          key: boughtPath,
-          type: "add",
-          value: boughtValue,
-        },
-        {
-          key: "system.experience.available",
-          type: "add",
-          value: spentXP * -1,
-        }
-      ],
+      system: {
+        changes: [
+          {
+            key: boughtPath,
+            type: "add",
+            value: boughtValue,
+          },
+          {
+            key: "system.experience.available",
+            type: "add",
+            value: spentXP * -1,
+          }
+        ],
+      },
     };
 
     // Brawn increases Soak
     if (boughtPath === "system.characteristics.Brawn.value") {
-      effects.changes.push({
+      effects.system.changes.push({
         key: "system.stats.soak.value",
         type: "add",
         value: 1,

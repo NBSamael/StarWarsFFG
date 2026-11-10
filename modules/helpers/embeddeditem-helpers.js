@@ -311,28 +311,34 @@ export default class EmbeddedItemHelpers {
   }
 
   // totally not ripped from phind telling me how to do this
-  static removeKeyFromObject(obj, keyToRemove) {
+  // `seen` stops the walk on circular references (in v14, effect changes point back to their effect)
+  static removeKeyFromObject(obj, keyToRemove, seen = new WeakSet()) {
+    if (!obj || typeof obj !== 'object' || seen.has(obj)) return;
+    seen.add(obj);
     for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         if (key === keyToRemove) {
           delete obj[key];
         } else if (typeof obj[key] === 'object') {
-          EmbeddedItemHelpers.removeKeyFromObject(obj[key], keyToRemove);
+          EmbeddedItemHelpers.removeKeyFromObject(obj[key], keyToRemove, seen);
         }
       }
     }
   }
 
   // totally not ripped from phind telling me how to do this
-  static findKeysIncludingStringRecursively(obj, str) {
+  // `seen` stops the walk on circular references (in v14, effect changes point back to their effect)
+  static findKeysIncludingStringRecursively(obj, str, seen = new WeakSet()) {
     let keys = [];
+    if (!obj || typeof obj !== 'object' || seen.has(obj)) return keys;
+    seen.add(obj);
     for (let key in obj) {
-      if (obj.hasOwnProperty(key)) {
+      if (Object.prototype.hasOwnProperty.call(obj, key)) {
         if (key.includes(str)) {
           keys.push(key);
         }
         if (typeof obj[key] === 'object') {
-          keys = keys.concat(EmbeddedItemHelpers.findKeysIncludingStringRecursively(obj[key], str));
+          keys = keys.concat(EmbeddedItemHelpers.findKeysIncludingStringRecursively(obj[key], str, seen));
         }
       }
     }

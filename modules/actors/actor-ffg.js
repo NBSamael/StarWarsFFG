@@ -213,6 +213,9 @@ export class ActorFFG extends Actor {
     const data = actor.system;
     const flags = actor.flags;
 
+    // weapons add the wielder's characteristic to their damage; characteristics are final once effects are applied
+    this.items.forEach(item => item.prepareCharacteristicDamage?.());
+
     // if the actor has skills, add custom skills
     if (data.skills) {
       let skills = JSON.parse(JSON.stringify(CONFIG.FFG.skills));
