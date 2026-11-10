@@ -1,3 +1,17 @@
+`2.1.0` (fork NBSamael/StarWarsFFG)
+* Foundry VTT v14 support (verified on 14.370). Foundry 13 is no longer supported. **Back up your worlds before upgrading**: Foundry converts existing Active Effects to the v14 format and this cannot be undone.
+  * Based on the community v14 patch ([StarWarsFoundryVTT/StarWarsFFG#2388](https://github.com/StarWarsFoundryVTT/StarWarsFFG/pull/2388), [@CharlieBliss](https://github.com/CharlieBliss))
+  * Active Effects use the v14 format (`system.changes`, string change types), including statuses and user-defined statuses
+  * Chat messages and rolls use v14 message modes; context menus use the v14 format
+* Fixes:
+  * Item sheets no longer crash on open ("Maximum call stack size exceeded")
+  * Editing an item updates its Active Effects again
+  * "Next check" and "this combat" statuses are removed when they should be
+  * The dice button next to the chat input is back
+  * Importing a weapon with the Defensive quality no longer fails
+  * Character encumbrance follows item changes immediately, instead of using the previous values
+  * Weapon damage includes the wielder's characteristic as modified by Active Effects
+
 `2.0.4`
 * Features:
   * Added a compendium browser to search and filter items across all world compendiums! ([#2267](https://github.com/StarWarsFoundryVTT/StarWarsFFG/pull/2267), [@KamiliaBlow](https://github.com/KamiliaBlow))
