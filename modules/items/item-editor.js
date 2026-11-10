@@ -360,7 +360,7 @@ export class itemEditor extends FormApplication  {
               for (const curMod of explodedMods) {
                 changes.push({
                   key: ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']),
-                  mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                  type: "add",
                   value: formData.system.attributes[modKey].value,
                 });
               }
@@ -369,14 +369,14 @@ export class itemEditor extends FormApplication  {
                 // existing entry
                 CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
                 await match.update({
-                  changes: changes,
+                  "system.changes": changes,
                   disabled: !equipped,
                 });
               } else {
                 // new entry
                 const effect = {
                   name: modKey,
-                  changes: changes,
+                  system: { changes: changes },
                   disabled: !equipped,
                 };
                 CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);
@@ -414,7 +414,7 @@ export class itemEditor extends FormApplication  {
                 for (const curMod of explodedMods) {
                   changes.push({
                     key: ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']),
-                    mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+                    type: "add",
                     value: modifier.system.attributes[modKey].value,
                   });
                 }
@@ -432,7 +432,7 @@ export class itemEditor extends FormApplication  {
                   // existing entry
                   CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
                   await match.update({
-                    changes: changes,
+                    "system.changes": changes,
                     disabled: disabled,
                   });
                 } else {
@@ -440,7 +440,7 @@ export class itemEditor extends FormApplication  {
                   const effect = {
                     name: modKey,
                     disabled: disabled,
-                    changes: changes,
+                    system: { changes: changes },
                   };
                   CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);
                   await this.data.sourceObject.createEmbeddedDocuments("ActiveEffect", [effect]);
@@ -506,7 +506,7 @@ export class itemEditor extends FormApplication  {
         for (const curMod of explodedMods) {
           changes.push({
             key: ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']),
-            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            type: "add",
             value: formData.system.attributes[modKey].value,
           });
         }
@@ -515,14 +515,14 @@ export class itemEditor extends FormApplication  {
           // existing entry
           CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
           await match.update({
-            changes: changes,
+            "system.changes": changes,
             disabled: !equipped,
           });
         } else {
           // new entry
           const effect = {
             name: modKey,
-            changes: changes,
+            system: { changes: changes },
             disabled: !equipped,
           };
           CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);
@@ -707,7 +707,7 @@ export class talentEditor extends itemEditor {
         for (const curMod of explodedMods) {
           changes.push({
             key: ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']),
-            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            type: "add",
             value: formData.attributes[modKey].value,
           });
         }
@@ -716,14 +716,14 @@ export class talentEditor extends itemEditor {
           // existing entry
           CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
           await match.update({
-            changes: changes,
+            "system.changes": changes,
             disabled: !this.data.clickedObject.islearned,
           });
         } else {
           // new entry
           const effect = {
             name: modKey,
-            changes: changes,
+            system: { changes: changes },
             disabled: !this.data.clickedObject.islearned,
           };
           CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);
@@ -921,7 +921,7 @@ export class forcePowerEditor extends itemEditor {
         for (const curMod of explodedMods) {
           changes.push({
             key: ModifierHelpers.getModKeyPath(curMod['modType'], curMod['mod']),
-            mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+            type: "add",
             value: formData.attributes[modKey].value,
           });
         }
@@ -930,14 +930,14 @@ export class forcePowerEditor extends itemEditor {
           // existing entry
           CONFIG.logger.debug(`>>>> Staged AE changes for update: ${JSON.stringify(changes)}`);
           await match.update({
-            changes: changes,
+            "system.changes": changes,
             disabled: !this.data.clickedObject.islearned,
           });
         } else {
           // new entry
           const effect = {
             name: modKey,
-            changes: changes,
+            system: { changes: changes },
             disabled: !this.data.clickedObject.islearned,
           };
           CONFIG.logger.debug(`>>>> Staged AE for creation: ${JSON.stringify(effect)}`);

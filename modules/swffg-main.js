@@ -15,6 +15,7 @@ import CombatantFFG, {
   updateCombatTracker
 } from "./combat-ffg.js";
 import { ActiveEffectFFG} from "./active-effects/active-effect-ffg.js";
+import { ActiveEffectDataFFG } from "./active-effects/active-effect-data-ffg.js";
 import { ItemFFG } from "./items/item-ffg.js";
 import { ItemSheetFFG } from "./items/item-sheet-ffg.js";
 import { ItemSheetFFGV2 } from "./items/item-sheet-ffg-v2.js";
@@ -53,6 +54,7 @@ import SWAImporter from "./importer/swa-importer.js";
 import {CharacterCreator} from "./helpers/character-creator.js";
 import {xpLogUndo} from "./helpers/actor-helpers.js";
 import {register_system_tours} from "./helpers/tours.js";
+import EffectHelpers from "./helpers/effects.js";
 import {ITEM_DATA_MODELS} from "./data/items/index.js";
 import {ACTOR_DATA_MODELS} from "./data/actors/index.js";
 
@@ -106,14 +108,11 @@ Hooks.once("init", async function () {
   CONFIG.Actor.documentClass = ActorFFG;
   CONFIG.Item.documentClass = ItemFFG;
   CONFIG.ActiveEffect.documentClass = ActiveEffectFFG;
+  CONFIG.ActiveEffect.dataModels.base = ActiveEffectDataFFG;
 
   // Subtypes describe themselves with Data Models rather than template.json
   Object.assign(CONFIG.Item.dataModels, ITEM_DATA_MODELS);
   Object.assign(CONFIG.Actor.dataModels, ACTOR_DATA_MODELS);
-
-  // we do not want the legacy active effect transfer mode
-  // also, reeeeeeeeeeeeeeeee
-  CONFIG.ActiveEffect.legacyTransferral = false;
 
   // Define custom Roll class
   CONFIG.Dice.rolls.push(CONFIG.Dice.rolls[0]);
@@ -695,22 +694,22 @@ Hooks.once("init", async function () {
     for (const skill of Object.keys(CONFIG.FFG.skills)) {
       allSkillChanges['boost'].push({
         key: `system.skills.${skill}.boost`,
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        type: "add",
         value: "1",
       });
       allSkillChanges['setback'].push({
         key: `system.skills.${skill}.setback`,
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        type: "add",
         value: "1",
       });
       allSkillChanges['upgrade'].push({
         key: `system.skills.${skill}.upgrades`,
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        type: "add",
         value: "1",
       });
       allSkillChanges['success'].push({
         key: `system.skills.${skill}.success`,
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
+        type: "add",
         value: "1",
       });
     }
@@ -721,7 +720,7 @@ Hooks.once("init", async function () {
       id: "starwarsffg-defeated",
       img: "systems/starwarsffg/images/status/defeated.svg",
       name: "SWFFG.Status.Defeated",
-      changes: [],
+      system: { changes: [] },
     });
 
     // one-time statuses
@@ -729,8 +728,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-boost-once",
       img: `systems/starwarsffg/images/dice/${CONFIG.FFG.theme}/blue.png`,
       name: "SWFFG.Status.Boost.Next",
-      changes: allSkillChanges['boost'],
       system: {
+        changes: allSkillChanges['boost'],
         duration: "once",
       }
     });
@@ -738,8 +737,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-setback-once",
       img: `systems/starwarsffg/images/dice/${CONFIG.FFG.theme}/black.png`,
       name: "SWFFG.Status.Setback.Next",
-      changes: allSkillChanges['setback'],
       system: {
+        changes: allSkillChanges['setback'],
         duration: "once",
       }
     });
@@ -747,8 +746,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-upgrade-once",
       img: `systems/starwarsffg/images/dice/${CONFIG.FFG.theme}/yellow.png`,
       name: "SWFFG.Status.Upgrade.Next",
-      changes: allSkillChanges['upgrade'],
       system: {
+        changes: allSkillChanges['upgrade'],
         duration: "once",
       }
     });
@@ -756,8 +755,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-success-once",
       img: `systems/starwarsffg/images/dice/${CONFIG.FFG.theme}/success.png`,
       name: "SWFFG.Status.Success.Next",
-      changes: allSkillChanges['success'],
       system: {
+        changes: allSkillChanges['success'],
         duration: "once",
       }
     });
@@ -765,44 +764,46 @@ Hooks.once("init", async function () {
       id: "starwarsffg-heavy-cover",
       img: "icons/equipment/shield/buckler-wooden-boss-lightning.webp",
       name: "SWFFG.Status.Cover.Heavy",
-      changes: [
-        {
-          key: "system.stats.defence.melee",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: "2",
-        },
-        {
-          key: "system.stats.defence.ranged",
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: "2",
-        },
-      ],
+      system: {
+        changes: [
+          {
+            key: "system.stats.defence.melee",
+            type: "add",
+            value: "2",
+          },
+          {
+            key: "system.stats.defence.ranged",
+            type: "add",
+            value: "2",
+          },
+        ],
+      },
     });
     CONFIG.statusEffects.push({
       id: "starwarsffg-disoriented",
       img: "systems/starwarsffg/images/status/disoriented.svg",
       name: "SWFFG.Status.Disoriented",
-      changes: allSkillChanges['setback'],
+      system: { changes: allSkillChanges['setback'] },
     });
     CONFIG.statusEffects.push({
       id: "starwarsffg-immobilized",
       img: "systems/starwarsffg/images/status/immobilized.svg",
       name: "SWFFG.Status.Immobilized",
-      changes: [],
+      system: { changes: [] },
     });
     CONFIG.statusEffects.push({
       id: "starwarsffg-staggered",
       img: "systems/starwarsffg/images/status/staggered.svg",
       name: "SWFFG.Status.Staggered",
-      changes: [],
+      system: { changes: [] },
     });
     // combat-length statuses
     CONFIG.statusEffects.push({
       id: "starwarsffg-boost-combat",
       img: `systems/starwarsffg/images/status/blue.png`,
       name: "SWFFG.Status.Boost.Combat",
-      changes: allSkillChanges['boost'],
       system: {
+        changes: allSkillChanges['boost'],
         duration: "combat",
       }
     });
@@ -810,8 +811,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-setback-combat",
       img: `systems/starwarsffg/images/status/black.png`,
       name: "SWFFG.Status.Setback.Combat",
-      changes: allSkillChanges['setback'],
       system: {
+        changes: allSkillChanges['setback'],
         duration: "combat",
       }
     });
@@ -819,8 +820,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-upgrade-combat",
       img: `systems/starwarsffg/images/status/yellow.png`,
       name: "SWFFG.Status.Upgrade.Combat",
-      changes: allSkillChanges['upgrade'],
       system: {
+        changes: allSkillChanges['upgrade'],
         duration: "combat",
       }
     });
@@ -828,8 +829,8 @@ Hooks.once("init", async function () {
       id: "starwarsffg-success-combat",
       img: `systems/starwarsffg/images/status/success.png`,
       name: "SWFFG.Status.Success.Combat",
-      changes: allSkillChanges['success'],
       system: {
+        changes: allSkillChanges['success'],
         duration: "combat",
       }
     });
@@ -838,7 +839,8 @@ Hooks.once("init", async function () {
     try {
       const addedStatuses = $.parseJSON(game.settings.get("starwarsffg", "additionalStatuses"));
       for (const status of addedStatuses) {
-        CONFIG.statusEffects.push(status);
+        // statuses written for older Foundry versions use top-level changes with numeric modes
+        CONFIG.statusEffects.push(EffectHelpers.normalizeEffectData(status));
       }
 
     } catch (e) {
@@ -1014,7 +1016,9 @@ Hooks.on("renderChatInput", (app, html, data) => {
       rollButton.type = "button";
       rollButton.classList.add("ui-control", "icon", "fa-light", "fa-dice-d20");
 
-      const rollPrivacyElement = document.querySelector("#roll-privacy");
+      // v14 renamed the roll privacy buttons to message modes
+      const rollPrivacyElement = document.querySelector("#message-modes") ?? document.querySelector("#roll-privacy");
+      if (!rollPrivacyElement) return;
       rollPrivacyElement.appendChild(rollButton);
 
       rollButton.onclick = async function () {
@@ -1091,7 +1095,8 @@ Hooks.on("renderCompendiumDirectory", (app, html, data) => {
 });
 
 // Update chat messages with dice images
-Hooks.on("renderChatMessage", async (app, html, messageData) => {
+Hooks.on("renderChatMessageHTML", async (app, element, messageData) => {
+  const html = $(element);
   const content = html.find(".message-content");
   content[0].innerHTML = await PopoutEditor.renderDiceImages(content[0].innerHTML);
 
@@ -1499,7 +1504,7 @@ Hooks.once("ready", async () => {
         CONFIG.FFG.DestinyGM = game.user.id;
 
         ChatMessage.create({
-          user: game.user.id,
+          author: game.user.id,
           content: messageText,
         });
       },
@@ -1554,12 +1559,14 @@ Hooks.once("ready", async () => {
   if (counterApi) {
     Hooks.on("updateActiveEffect", function(effect, changes) {
         const counterValue = foundry.utils.getProperty(changes, "flags.statuscounter.counter.value");
-        if (counterValue) {
-          for (const change of effect.changes) {
+        if (counterValue && effect.isOwner) {
+          // work on a plain copy: prepared v14 changes point back to their effect
+          const effectChanges = EffectHelpers.getChanges(effect);
+          for (const change of effectChanges) {
             change['value'] = counterValue;
           }
+          effect.update({"system.changes": effectChanges});
         }
-        effect.update({changes: effect.changes});
     });
   }
 

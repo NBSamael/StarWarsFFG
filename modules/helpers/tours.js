@@ -135,11 +135,13 @@ class EditModeTour extends foundry.nue.Tour {
    */
   async giveActorAE() {
     const AEData = {
-      changes: [{
-        key: "system.characteristics.Brawn.value",
-        mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-        value: 3,
-      }],
+      system: {
+        changes: [{
+          key: "system.characteristics.Brawn.value",
+          type: "add",
+          value: 3,
+        }],
+      },
       name: "example",
       disabled: false,
     };

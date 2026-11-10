@@ -1210,11 +1210,13 @@ export class CharacterCreator extends HandlebarsApplicationMixin(ApplicationV2) 
       });
       const AE = {
         name: nk,
-        changes: [{
-          key: `system.skills.${skillPurchase}.rank`,
-          mode: CONST.ACTIVE_EFFECT_MODES.ADD,
-          value: 1,
-        }],
+        system: {
+          changes: [{
+            key: `system.skills.${skillPurchase}.rank`,
+            type: "add",
+            value: 1,
+          }],
+        },
       };
       await item.createEmbeddedDocuments("ActiveEffect", [AE]);
     }

@@ -1,6 +1,7 @@
 import PopoutEditor from "../popout-editor.js";
 import { ForceDie } from "./dietype/ForceDie.js";
 import {migrateDataToSystem} from "../helpers/migration.js";
+import {configuredMessageMode, normalizeMessageMode} from "../helpers/message-mode.js";
 import {ItemFFG} from "../items/item-ffg.js";
 
 /**
@@ -255,7 +256,7 @@ export class RollFFG extends Roll {
     const isPrivate = chatOptions.isPrivate;
 
     // Execute the roll, if needed
-    if (!this._evaluated) await this.roll();
+    if (!this._evaluated) await this.evaluate();
     await this.updateSymbols();
 
     // Define chat data
@@ -342,22 +343,20 @@ export class RollFFG extends Roll {
 
   /* -------------------------------------------- */
   /** @override */
-  async toMessage(messageData = {}, { rollMode = null, create = true } = {}) {
+  async toMessage(messageData = {}, { messageMode = null, rollMode = null, create = true } = {}) {
     // Perform the roll, if it has not yet been rolled
     if (!this._evaluated) await this.evaluate();
 
-    const rMode = rollMode || messageData.rollMode || game.settings.get("core", "rollMode");
-
-    if (["gmroll", "blindroll"].includes(rMode)) {
-      messageData.whisper = ChatMessage.getWhisperRecipients("GM");
-    }
-    if (rMode === "blindroll") messageData.blind = true;
-    if (rMode === "selfroll") messageData.whisper = [game.user.id];
+    // legacy rollMode values (e.g. "gmroll") still come from older callers and modules
+    messageMode = normalizeMessageMode(messageMode || messageData.messageMode || rollMode || messageData.rollMode)
+      || configuredMessageMode();
+    delete messageData.rollMode;
+    delete messageData.messageMode;
 
     // Prepare chat data
     messageData = foundry.utils.mergeObject(
       {
-        user: game.user.id,
+        author: game.user.id,
         content: this.total,
         sound: CONFIG.sounds.dice,
       },
@@ -370,7 +369,7 @@ export class RollFFG extends Roll {
     // Either create the message or just return the chat data
     const cls = getDocumentClass("ChatMessage");
     const msg = new cls(messageData);
-    if (rMode) msg.applyRollMode(rMode);
+    msg.applyMode(messageMode);
 
     // Either create or return the data
     return create ? await cls.create(msg) : msg;
